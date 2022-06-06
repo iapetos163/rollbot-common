@@ -60,13 +60,16 @@ export interface DecodedFeedbackTraining extends DiscriminatedDecodedMessage {
 
 export type DecodedMessage = DecodedClientData | DecodedManualCommand | DecodedFeedbackCommand | DecodedFeedbackTraining;
 
-const ACCEL_OFFSET = 10;
+const COMMAND_SIZE = 2;
+const HEADER_SIZE = 9;
+const ACCEL_OFFSET = 1 + HEADER_SIZE;
 const IMAGE_OFFSET = ACCEL_OFFSET + 6 * 4;
 
-export const encodeMessage = ({ accelerometer, messageId, timestamp, image }: EncodeClientData) => {
+export const encodeClientData = ({ accelerometer, messageId, timestamp, image }: EncodeClientData) => {
   const buffer = Buffer.allocUnsafe(IMAGE_OFFSET + image.length);
-  buffer.writeUInt8(messageId[0], 0);
-  buffer.writeBigUint64BE(timestamp[0], 1);
+  buffer.writeUint8(MessageType.ClientData, 0);
+  buffer.writeUInt8(messageId[0], 1);
+  buffer.writeBigUint64BE(timestamp[0], 2);
 
   buffer.writeFloatBE(accelerometer.inclination / 360, ACCEL_OFFSET);
   buffer.writeFloatBE(accelerometer.pitch / 360, 13);
@@ -92,19 +95,41 @@ const decodeClientData = (message: Buffer): DecodedClientData => {
   return { type: MessageType.ClientData, header, accelerometerData, image };
 };
 
+export const encodeManualCommand = (data: EncodeManualCommand) => {
+  const buffer = Buffer.alloc(1 + COMMAND_SIZE);
+  buffer.writeUint8(MessageType.ManualCommand, 0);
+  // TODO: command
+  return buffer;
+};
+
 const decodeManualCommand = (message: Buffer): DecodedManualCommand => {
   throw 'Not implemented';
+};
+
+export const encodeFeedbackCommand = ({ header }: EncodeFeedbackCommand) => {
+  const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
+  buffer.writeUint8(MessageType.FeedbackCommand, 0);
+  buffer.fill(header, 1);
+  // TODO: command
+  return buffer;
 };
 
 const decodeFeedbackCommand = (message: Buffer): DecodedFeedbackCommand => {
   throw 'Not implemented';
 };
 
+export const encodeFeedbackTraining = ({ header }: EncodeFeedbackTraining) => {
+  const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
+  buffer.writeUint8(MessageType.FeedbackTraining, 0);
+  buffer.fill(header, 1);
+  return buffer;
+};
+
 const decodeFeedbackTraining = (message: Buffer): DecodedFeedbackTraining => {
   throw 'Not implemented';
 };
 
-const decodeMessage = (message: Buffer): DecodedMessage => {
+export const decodeMessage = (message: Buffer): DecodedMessage => {
   const type = message.readUInt8(0);
   switch (type) {
     case MessageType.ClientData:
