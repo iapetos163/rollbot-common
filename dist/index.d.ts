@@ -44,5 +44,9 @@ export interface DecodedFeedbackTraining extends DiscriminatedDecodedMessage {
     type: MessageType.FeedbackTraining;
 }
 export declare type DecodedMessage = DecodedClientData | DecodedManualCommand | DecodedFeedbackCommand | DecodedFeedbackTraining;
-export declare const encodeMessage: ({ accelerometer, messageId, timestamp, image }: EncodeClientData) => Buffer;
+export declare const encodeClientData: ({ accelerometer, messageId, timestamp, image }: EncodeClientData) => Buffer;
+export declare const encodeManualCommand: (data: EncodeManualCommand) => Buffer;
+export declare const encodeFeedbackCommand: ({ header }: EncodeFeedbackCommand) => Buffer;
+export declare const encodeFeedbackTraining: ({ header }: EncodeFeedbackTraining) => Buffer;
+export declare const decodeMessage: (message: Buffer) => DecodedMessage;
 export {};
