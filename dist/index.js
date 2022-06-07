@@ -12,6 +12,7 @@ const COMMAND_SIZE = 2;
 const HEADER_SIZE = 9;
 const ACCEL_OFFSET = 1 + HEADER_SIZE;
 const IMAGE_OFFSET = ACCEL_OFFSET + 6 * 4;
+const FEEDBACK_COMMAND_OFFSET = 1 + HEADER_SIZE;
 const encodeClientData = ({ accelerometer, messageId, timestamp, image }) => {
     const buffer = Buffer.allocUnsafe(IMAGE_OFFSET + image.length);
     buffer.writeUint8(MessageType.ClientData, 0);
@@ -28,7 +29,7 @@ const encodeClientData = ({ accelerometer, messageId, timestamp, image }) => {
 };
 exports.encodeClientData = encodeClientData;
 const decodeClientData = (message) => {
-    const header = message.slice(1, ACCEL_OFFSET);
+    const header = message.slice(1, 1 + HEADER_SIZE);
     const accelerometerData = new Float32Array(6);
     for (let i = 0; i < 6; i++) {
         const offset = i * 4 + ACCEL_OFFSET;
@@ -37,26 +38,44 @@ const decodeClientData = (message) => {
     const image = message.slice(IMAGE_OFFSET);
     return { type: MessageType.ClientData, header, accelerometerData, image };
 };
-const encodeManualCommand = (data) => {
+const encodeManualCommand = ({ command }) => {
     const buffer = Buffer.alloc(1 + COMMAND_SIZE);
     buffer.writeUint8(MessageType.ManualCommand, 0);
-    // TODO: command
+    buffer.writeInt8(command[0], 1);
+    buffer.writeInt8(command[1], 2);
     return buffer;
 };
 exports.encodeManualCommand = encodeManualCommand;
-const decodeManualCommand = (message) => {
-    throw 'Not implemented';
+const decodeSpeed = (message, offset) => {
+    let speed = message.readInt8(offset) * 2;
+    if (speed < -255)
+        speed = -255;
+    return speed;
 };
-const encodeFeedbackCommand = ({ header }) => {
+const decodeManualCommand = (message) => {
+    return {
+        type: MessageType.ManualCommand,
+        leftSpeed: decodeSpeed(message, 1),
+        rightSpeed: decodeSpeed(message, 2),
+    };
+};
+const encodeFeedbackCommand = ({ header, command }) => {
     const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
     buffer.writeUint8(MessageType.FeedbackCommand, 0);
     buffer.fill(header, 1);
-    // TODO: command
+    buffer.writeInt8(command[0], FEEDBACK_COMMAND_OFFSET);
+    buffer.writeInt8(command[1], FEEDBACK_COMMAND_OFFSET + 1);
     return buffer;
 };
 exports.encodeFeedbackCommand = encodeFeedbackCommand;
 const decodeFeedbackCommand = (message) => {
-    throw 'Not implemented';
+    const header = message.slice(1, 1 + HEADER_SIZE);
+    return {
+        type: MessageType.FeedbackCommand,
+        header,
+        leftSpeed: decodeSpeed(message, 1),
+        rightSpeed: decodeSpeed(message, 2),
+    };
 };
 const encodeFeedbackTraining = ({ header }) => {
     const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
@@ -66,7 +85,8 @@ const encodeFeedbackTraining = ({ header }) => {
 };
 exports.encodeFeedbackTraining = encodeFeedbackTraining;
 const decodeFeedbackTraining = (message) => {
-    throw 'Not implemented';
+    const header = message.slice(1, 1 + HEADER_SIZE);
+    return { type: MessageType.FeedbackTraining, header };
 };
 const decodeMessage = (message) => {
     const type = message.readUInt8(0);

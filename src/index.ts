@@ -29,23 +29,33 @@ export interface DecodedClientData extends DiscriminatedDecodedMessage {
 }
 
 export interface EncodeManualCommand {
-  // TODO
+  /** length 2 */
+  command: Int8Array;
 }
 
 export interface DecodedManualCommand extends DiscriminatedDecodedMessage {
   type: MessageType.ManualCommand;
-  // TODO
+  /** even number from -254 to 254, or -255 */
+  leftSpeed: number;
+  /** even number from -254 to 254, or -255 */
+  rightSpeed: number;
 }
 
 export interface EncodeFeedbackCommand {
   /** 9 bytes */
   header: Buffer;
-  // TODO
+  /** length 2 */
+  command: Int8Array;
 }
 
 export interface DecodedFeedbackCommand extends DiscriminatedDecodedMessage {
   type: MessageType.FeedbackCommand;
-  // TODO
+  /** 9 bytes */
+  header: Buffer;
+  /** even number from -254 to 254, or -255 */
+  leftSpeed: number;
+  /** even number from -254 to 254, or -255 */
+  rightSpeed: number;
 }
 
 export interface EncodeFeedbackTraining {
@@ -55,7 +65,8 @@ export interface EncodeFeedbackTraining {
 
 export interface DecodedFeedbackTraining extends DiscriminatedDecodedMessage {
   type: MessageType.FeedbackTraining;
-  // TODO
+  /** 9 bytes */
+  header: Buffer;
 }
 
 export type DecodedMessage = DecodedClientData | DecodedManualCommand | DecodedFeedbackCommand | DecodedFeedbackTraining;
@@ -64,6 +75,7 @@ const COMMAND_SIZE = 2;
 const HEADER_SIZE = 9;
 const ACCEL_OFFSET = 1 + HEADER_SIZE;
 const IMAGE_OFFSET = ACCEL_OFFSET + 6 * 4;
+const FEEDBACK_COMMAND_OFFSET = 1 + HEADER_SIZE;
 
 export const encodeClientData = ({ accelerometer, messageId, timestamp, image }: EncodeClientData) => {
   const buffer = Buffer.allocUnsafe(IMAGE_OFFSET + image.length);
@@ -84,7 +96,7 @@ export const encodeClientData = ({ accelerometer, messageId, timestamp, image }:
 
 
 const decodeClientData = (message: Buffer): DecodedClientData => {
-  const header = message.slice(1, ACCEL_OFFSET);
+  const header = message.slice(1, 1 + HEADER_SIZE);
 
   const accelerometerData = new Float32Array(6);
   for (let i = 0; i < 6; i++) {
@@ -95,27 +107,45 @@ const decodeClientData = (message: Buffer): DecodedClientData => {
   return { type: MessageType.ClientData, header, accelerometerData, image };
 };
 
-export const encodeManualCommand = (data: EncodeManualCommand) => {
+export const encodeManualCommand = ({ command }: EncodeManualCommand) => {
   const buffer = Buffer.alloc(1 + COMMAND_SIZE);
   buffer.writeUint8(MessageType.ManualCommand, 0);
-  // TODO: command
+  buffer.writeInt8(command[0], 1);
+  buffer.writeInt8(command[1], 2);
   return buffer;
 };
 
-const decodeManualCommand = (message: Buffer): DecodedManualCommand => {
-  throw 'Not implemented';
+const decodeSpeed = (message: Buffer, offset: number) => {
+  let speed = message.readInt8(offset) * 2;
+  if (speed < -255) speed = -255;
+  return speed;
 };
 
-export const encodeFeedbackCommand = ({ header }: EncodeFeedbackCommand) => {
+const decodeManualCommand = (message: Buffer): DecodedManualCommand => {
+  return {
+    type: MessageType.ManualCommand,
+    leftSpeed: decodeSpeed(message, 1),
+    rightSpeed: decodeSpeed(message, 2),
+  };
+};
+
+export const encodeFeedbackCommand = ({ header, command }: EncodeFeedbackCommand) => {
   const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
   buffer.writeUint8(MessageType.FeedbackCommand, 0);
   buffer.fill(header, 1);
-  // TODO: command
+  buffer.writeInt8(command[0], FEEDBACK_COMMAND_OFFSET);
+  buffer.writeInt8(command[1], FEEDBACK_COMMAND_OFFSET + 1);
   return buffer;
 };
 
 const decodeFeedbackCommand = (message: Buffer): DecodedFeedbackCommand => {
-  throw 'Not implemented';
+  const header = message.slice(1, 1 + HEADER_SIZE);
+  return {
+    type: MessageType.FeedbackCommand,
+    header,
+    leftSpeed: decodeSpeed(message, 1),
+    rightSpeed: decodeSpeed(message, 2),
+  };
 };
 
 export const encodeFeedbackTraining = ({ header }: EncodeFeedbackTraining) => {
@@ -126,7 +156,8 @@ export const encodeFeedbackTraining = ({ header }: EncodeFeedbackTraining) => {
 };
 
 const decodeFeedbackTraining = (message: Buffer): DecodedFeedbackTraining => {
-  throw 'Not implemented';
+  const header = message.slice(1, 1 + HEADER_SIZE);
+  return { type: MessageType.FeedbackTraining, header };
 };
 
 export const decodeMessage = (message: Buffer): DecodedMessage => {
