@@ -30,13 +30,22 @@ const encodeClientData = ({ accelerometer, messageId, timestamp, image }) => {
 exports.encodeClientData = encodeClientData;
 const decodeClientData = (message) => {
     const header = message.slice(1, 1 + HEADER_SIZE);
+    const messageId = header.readUint8(0);
+    const timestamp = header.readBigUInt64BE(1);
     const accelerometerData = new Float32Array(6);
     for (let i = 0; i < 6; i++) {
         const offset = i * 4 + ACCEL_OFFSET;
         accelerometerData[i] = message.readFloatBE(offset);
     }
     const image = message.slice(IMAGE_OFFSET);
-    return { type: MessageType.ClientData, header, accelerometerData, image };
+    return {
+        type: MessageType.ClientData,
+        header,
+        messageId,
+        timestamp,
+        accelerometerData,
+        image,
+    };
 };
 const encodeManualCommand = ({ command }) => {
     const buffer = Buffer.alloc(1 + COMMAND_SIZE);

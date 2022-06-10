@@ -19,6 +19,9 @@ export interface DecodedClientData extends DiscriminatedDecodedMessage {
     type: MessageType.ClientData;
     /** 9 bytes */
     header: Buffer;
+    /** integer 0-255 */
+    messageId: number;
+    timestamp: bigint;
     /** length 6 */
     accelerometerData: Float32Array;
     /** JPEG */

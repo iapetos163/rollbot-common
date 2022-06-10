@@ -54,9 +54,11 @@ describe('ClientData', () => {
 
     expect(decoded.type).toBe(MessageType.ClientData);
 
-    const { header, image: decodedImage } = decoded as DecodedClientData;
+    const { header, messageId: decodedMessageId, timestamp: decodedTimestamp, image: decodedImage } = decoded as DecodedClientData;
     expect(header.readUint8(0)).toBe(messageId[0]);
     expect(header.readBigUInt64BE(1)).toBe(timestamp[0]);
+    expect(decodedMessageId).toBe(messageId[0]);
+    expect(decodedTimestamp).toBe(timestamp[0]);
     expect(decodedImage.equals(image)).toBe(true);
   });
 });

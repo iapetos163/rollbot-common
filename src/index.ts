@@ -22,6 +22,9 @@ export interface DecodedClientData extends DiscriminatedDecodedMessage {
   type: MessageType.ClientData;
   /** 9 bytes */
   header: Buffer;
+  /** integer 0-255 */
+  messageId: number;
+  timestamp: bigint;
   /** length 6 */
   accelerometerData: Float32Array;
   /** JPEG */
@@ -97,6 +100,8 @@ export const encodeClientData = ({ accelerometer, messageId, timestamp, image }:
 
 const decodeClientData = (message: Buffer): DecodedClientData => {
   const header = message.slice(1, 1 + HEADER_SIZE);
+  const messageId = header.readUint8(0);
+  const timestamp = header.readBigUInt64BE(1);
 
   const accelerometerData = new Float32Array(6);
   for (let i = 0; i < 6; i++) {
@@ -104,7 +109,14 @@ const decodeClientData = (message: Buffer): DecodedClientData => {
     accelerometerData[i] = message.readFloatBE(offset);
   }
   const image = message.slice(IMAGE_OFFSET);
-  return { type: MessageType.ClientData, header, accelerometerData, image };
+  return {
+    type: MessageType.ClientData,
+    header,
+    messageId,
+    timestamp,
+    accelerometerData,
+    image,
+  };
 };
 
 export const encodeManualCommand = ({ command }: EncodeManualCommand) => {
