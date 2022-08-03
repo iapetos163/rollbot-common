@@ -1,4 +1,5 @@
 import type { Accelerometer } from 'johnny-five';
+import { decodeHeader, encodeHeader, HEADER_SIZE } from './header';
 
 export enum MessageType {
   ClientData,
@@ -75,7 +76,6 @@ export interface DecodedFeedbackTraining extends DiscriminatedDecodedMessage {
 export type DecodedMessage = DecodedClientData | DecodedManualCommand | DecodedFeedbackCommand | DecodedFeedbackTraining;
 
 const COMMAND_SIZE = 2;
-const HEADER_SIZE = 9;
 const ACCEL_OFFSET = 1 + HEADER_SIZE;
 const IMAGE_OFFSET = ACCEL_OFFSET + 6 * 4;
 const FEEDBACK_COMMAND_OFFSET = 1 + HEADER_SIZE;
@@ -83,8 +83,7 @@ const FEEDBACK_COMMAND_OFFSET = 1 + HEADER_SIZE;
 export const encodeClientData = ({ accelerometer, messageId, timestamp, image }: EncodeClientData) => {
   const buffer = Buffer.allocUnsafe(IMAGE_OFFSET + image.length);
   buffer.writeUint8(MessageType.ClientData, 0);
-  buffer.writeUInt8(messageId[0], 1);
-  buffer.writeBigUint64BE(timestamp[0], 2);
+  buffer.fill(encodeHeader({ messageId, timestamp }), 1, ACCEL_OFFSET);
 
   buffer.writeFloatBE(accelerometer.inclination / 360, ACCEL_OFFSET);
   buffer.writeFloatBE(accelerometer.pitch / 360, 13);
@@ -100,8 +99,7 @@ export const encodeClientData = ({ accelerometer, messageId, timestamp, image }:
 
 const decodeClientData = (message: Buffer): DecodedClientData => {
   const header = message.slice(1, 1 + HEADER_SIZE);
-  const messageId = header.readUint8(0);
-  const timestamp = header.readBigUInt64BE(1);
+  const { messageId, timestamp } = decodeHeader(header);
 
   const accelerometerData = new Float32Array(6);
   for (let i = 0; i < 6; i++) {
@@ -144,7 +142,7 @@ const decodeManualCommand = (message: Buffer): DecodedManualCommand => {
 export const encodeFeedbackCommand = ({ header, command }: EncodeFeedbackCommand) => {
   const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
   buffer.writeUint8(MessageType.FeedbackCommand, 0);
-  buffer.fill(header, 1);
+  buffer.fill(header, 1, FEEDBACK_COMMAND_OFFSET);
   buffer.writeInt8(command[0], FEEDBACK_COMMAND_OFFSET);
   buffer.writeInt8(command[1], FEEDBACK_COMMAND_OFFSET + 1);
   return buffer;

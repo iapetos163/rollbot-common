@@ -1,6 +1,9 @@
 import { randomBytes } from 'crypto';
 import type { Accelerometer } from 'johnny-five';
-import { DecodedClientData, DecodedFeedbackCommand, DecodedFeedbackTraining, decodeMessage, encodeClientData, encodeFeedbackCommand, encodeFeedbackTraining, MessageType } from '.';
+import {
+  DecodedClientData, DecodedFeedbackCommand, DecodedFeedbackTraining, MessageType,
+  decodeMessage, encodeClientData, encodeFeedbackCommand, encodeFeedbackTraining,
+} from './message';
 
 class MockAccelerometer {
   private static randomDegree() {

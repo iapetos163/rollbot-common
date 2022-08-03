@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodeMessage = exports.encodeFeedbackTraining = exports.encodeFeedbackCommand = exports.encodeManualCommand = exports.encodeClientData = exports.MessageType = void 0;
+const header_1 = require("./header");
 var MessageType;
 (function (MessageType) {
     MessageType[MessageType["ClientData"] = 0] = "ClientData";
@@ -9,15 +10,13 @@ var MessageType;
     MessageType[MessageType["FeedbackTraining"] = 3] = "FeedbackTraining";
 })(MessageType = exports.MessageType || (exports.MessageType = {}));
 const COMMAND_SIZE = 2;
-const HEADER_SIZE = 9;
-const ACCEL_OFFSET = 1 + HEADER_SIZE;
+const ACCEL_OFFSET = 1 + header_1.HEADER_SIZE;
 const IMAGE_OFFSET = ACCEL_OFFSET + 6 * 4;
-const FEEDBACK_COMMAND_OFFSET = 1 + HEADER_SIZE;
+const FEEDBACK_COMMAND_OFFSET = 1 + header_1.HEADER_SIZE;
 const encodeClientData = ({ accelerometer, messageId, timestamp, image }) => {
     const buffer = Buffer.allocUnsafe(IMAGE_OFFSET + image.length);
     buffer.writeUint8(MessageType.ClientData, 0);
-    buffer.writeUInt8(messageId[0], 1);
-    buffer.writeBigUint64BE(timestamp[0], 2);
+    buffer.fill((0, header_1.encodeHeader)({ messageId, timestamp }), 1, ACCEL_OFFSET);
     buffer.writeFloatBE(accelerometer.inclination / 360, ACCEL_OFFSET);
     buffer.writeFloatBE(accelerometer.pitch / 360, 13);
     buffer.writeFloatBE(accelerometer.roll / 360, 17);
@@ -29,9 +28,8 @@ const encodeClientData = ({ accelerometer, messageId, timestamp, image }) => {
 };
 exports.encodeClientData = encodeClientData;
 const decodeClientData = (message) => {
-    const header = message.slice(1, 1 + HEADER_SIZE);
-    const messageId = header.readUint8(0);
-    const timestamp = header.readBigUInt64BE(1);
+    const header = message.slice(1, 1 + header_1.HEADER_SIZE);
+    const { messageId, timestamp } = (0, header_1.decodeHeader)(header);
     const accelerometerData = new Float32Array(6);
     for (let i = 0; i < 6; i++) {
         const offset = i * 4 + ACCEL_OFFSET;
@@ -69,16 +67,16 @@ const decodeManualCommand = (message) => {
     };
 };
 const encodeFeedbackCommand = ({ header, command }) => {
-    const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
+    const buffer = Buffer.alloc(1 + header_1.HEADER_SIZE + COMMAND_SIZE);
     buffer.writeUint8(MessageType.FeedbackCommand, 0);
-    buffer.fill(header, 1);
+    buffer.fill(header, 1, FEEDBACK_COMMAND_OFFSET);
     buffer.writeInt8(command[0], FEEDBACK_COMMAND_OFFSET);
     buffer.writeInt8(command[1], FEEDBACK_COMMAND_OFFSET + 1);
     return buffer;
 };
 exports.encodeFeedbackCommand = encodeFeedbackCommand;
 const decodeFeedbackCommand = (message) => {
-    const header = message.slice(1, 1 + HEADER_SIZE);
+    const header = message.slice(1, 1 + header_1.HEADER_SIZE);
     return {
         type: MessageType.FeedbackCommand,
         header,
@@ -87,14 +85,14 @@ const decodeFeedbackCommand = (message) => {
     };
 };
 const encodeFeedbackTraining = ({ header }) => {
-    const buffer = Buffer.alloc(1 + HEADER_SIZE + COMMAND_SIZE);
+    const buffer = Buffer.alloc(1 + header_1.HEADER_SIZE + COMMAND_SIZE);
     buffer.writeUint8(MessageType.FeedbackTraining, 0);
     buffer.fill(header, 1);
     return buffer;
 };
 exports.encodeFeedbackTraining = encodeFeedbackTraining;
 const decodeFeedbackTraining = (message) => {
-    const header = message.slice(1, 1 + HEADER_SIZE);
+    const header = message.slice(1, 1 + header_1.HEADER_SIZE);
     return { type: MessageType.FeedbackTraining, header };
 };
 const decodeMessage = (message) => {
