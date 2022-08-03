@@ -6,6 +6,11 @@
     "build": "rm -rf dist && tsc",
     "test": "jest"
   },
+  "exports": {
+    "./header": "./dist/header",
+    "./log": "./dist/log",
+    "./message": "./dist/message"
+  },
   "license": "MPL-2.0",
   "devDependencies": {
     "@types/jest": "^28.1.1",
