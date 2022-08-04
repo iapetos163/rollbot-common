@@ -60,10 +60,12 @@ const decodeSpeed = (message, offset) => {
     return speed;
 };
 const decodeManualCommand = (message) => {
+    const rawCommandData = message.slice(1);
     return {
         type: MessageType.ManualCommand,
-        leftSpeed: decodeSpeed(message, 1),
-        rightSpeed: decodeSpeed(message, 2),
+        rawCommandData,
+        leftSpeed: decodeSpeed(rawCommandData, 0),
+        rightSpeed: decodeSpeed(rawCommandData, 1),
     };
 };
 const encodeFeedbackCommand = ({ header, command }) => {

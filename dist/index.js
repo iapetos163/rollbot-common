@@ -1,32 +1,14 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.message = exports.log = exports.header = void 0;
-const header = __importStar(require("./header"));
-exports.header = header;
-const log = __importStar(require("./log"));
-exports.log = log;
-const message = __importStar(require("./message"));
-exports.message = message;
+exports.message = exports.MessageLogWriter = exports.MessageLogReader = exports.LOG_BUFFER_SIZE = exports.HEADER_SIZE = void 0;
+var header_1 = require("./header");
+Object.defineProperty(exports, "HEADER_SIZE", { enumerable: true, get: function () { return header_1.HEADER_SIZE; } });
+var log_1 = require("./log");
+Object.defineProperty(exports, "LOG_BUFFER_SIZE", { enumerable: true, get: function () { return log_1.LOG_BUFFER_SIZE; } });
+Object.defineProperty(exports, "MessageLogReader", { enumerable: true, get: function () { return log_1.MessageLogReader; } });
+Object.defineProperty(exports, "MessageLogWriter", { enumerable: true, get: function () { return log_1.MessageLogWriter; } });
+const message_1 = require("./message");
+exports.message = {
+    encodeClientData: message_1.encodeClientData, encodeFeedbackCommand: message_1.encodeFeedbackCommand, encodeFeedbackTraining: message_1.encodeFeedbackTraining, encodeManualCommand: message_1.encodeManualCommand,
+    decode: message_1.decodeMessage,
+};

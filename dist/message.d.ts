@@ -33,6 +33,8 @@ export interface EncodeManualCommand {
 }
 export interface DecodedManualCommand extends DiscriminatedDecodedMessage {
     type: MessageType.ManualCommand;
+    /** 2 bytes */
+    rawCommandData: Buffer;
     /** even number from -254 to 254, or -255 */
     leftSpeed: number;
     /** even number from -254 to 254, or -255 */
