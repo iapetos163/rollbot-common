@@ -1,18 +1,51 @@
 import { createReadStream, createWriteStream, ReadStream, WriteStream } from 'fs';
 import { decodeHeader, HEADER_SIZE } from './header';
 
-export const LOG_BUFFER_SIZE = HEADER_SIZE + 8;
+export const LOG_BUFFER_SIZE = 9 + HEADER_SIZE;
 
-export interface MessageLogData {
+export enum LogType {
+  Feedback,
+  ManualCommand,
+}
+interface DiscriminatedLogData {
+  type: LogType;
+}
+
+export interface FeedbackLogData extends DiscriminatedLogData {
+  type: LogType.Feedback;
   messageId: number;
   sentTimestamp: bigint;
   receivedTimestamp: bigint;
 }
+export interface CommandLogData extends DiscriminatedLogData {
+  type: LogType.ManualCommand;
+  /** 2 bytes */
+  rawCommandData: Buffer;
+  receivedTimestamp: bigint;
+}
+
+export type MessageLogData = FeedbackLogData | CommandLogData;
 
 const readLogData = (buffer: Buffer, offset: number): MessageLogData => {
-  const { messageId, timestamp: sentTimestamp } = decodeHeader(buffer.slice(offset, offset + HEADER_SIZE));
-  const receivedTimestamp = buffer.readBigUInt64BE(offset + HEADER_SIZE);
-  return { messageId, sentTimestamp, receivedTimestamp };
+  const type = buffer.readUInt8(offset);
+  const receivedTimestamp = buffer.readBigUInt64BE(offset + 1);
+
+  switch (type) {
+    case LogType.Feedback: {
+      const { messageId, timestamp: sentTimestamp } = decodeHeader(buffer.slice(offset + 9, offset + 9 + HEADER_SIZE));
+      return { type, messageId, sentTimestamp, receivedTimestamp };
+    }
+    case LogType.ManualCommand:
+      return {
+        type,
+        receivedTimestamp,
+        rawCommandData: buffer.slice(offset + 9, offset + 11),
+      };
+
+    default:
+      throw `Unknown message type: ${type}`;
+  }
+
 };
 
 export class MessageLogWriter {
@@ -35,13 +68,33 @@ export class MessageLogWriter {
   }
 
   /**
-   * @param buffer 17 bytes
+   * @param buffer size: `LOG_BUFFER_SIZE`
    * @param header 9 bytes
    */
-  public recordToLog(buffer: Buffer, header: Buffer, timestamp: bigint) {
+  public writeFeedback(buffer: Buffer, header: Buffer, timestamp: bigint) {
     return new Promise<void>((resolve, reject) => {
-      buffer.fill(header, 0);
-      buffer.writeBigUInt64BE(timestamp, HEADER_SIZE);
+      buffer.writeUint8(LogType.Feedback, 0);
+      buffer.writeBigUInt64BE(timestamp, 1);
+      buffer.fill(header, 9);
+      this.out.write(buffer, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * @param buffer size: `LOG_BUFFER_SIZE`
+   * @param rawCommandData 2 bytes
+   */
+  public writeCommand(buffer: Buffer, rawCommandData: Buffer, timestamp: bigint) {
+    return new Promise<void>((resolve, reject) => {
+      buffer.writeUint8(LogType.ManualCommand, 0);
+      buffer.writeBigUInt64BE(timestamp, 1);
+      buffer.fill(rawCommandData, 9);
       this.out.write(buffer, (err) => {
         if (err) {
           reject(err);
