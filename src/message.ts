@@ -39,6 +39,8 @@ export interface EncodeManualCommand {
 
 export interface DecodedManualCommand extends DiscriminatedDecodedMessage {
   type: MessageType.ManualCommand;
+  /** 2 bytes */
+  rawCommandData: Buffer;
   /** even number from -254 to 254, or -255 */
   leftSpeed: number;
   /** even number from -254 to 254, or -255 */
@@ -132,10 +134,12 @@ const decodeSpeed = (message: Buffer, offset: number) => {
 };
 
 const decodeManualCommand = (message: Buffer): DecodedManualCommand => {
+  const rawCommandData = message.slice(1);
   return {
     type: MessageType.ManualCommand,
-    leftSpeed: decodeSpeed(message, 1),
-    rightSpeed: decodeSpeed(message, 2),
+    rawCommandData,
+    leftSpeed: decodeSpeed(rawCommandData, 0),
+    rightSpeed: decodeSpeed(rawCommandData, 1),
   };
 };
 
