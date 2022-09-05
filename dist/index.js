@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.message = exports.MessageType = exports.MessageLogWriter = exports.MessageLogReader = exports.LogType = exports.LOG_BUFFER_SIZE = exports.HEADER_SIZE = void 0;
+exports.message = exports.MessageType = exports.MessageLogWriter = exports.readMessageLog = exports.LogType = exports.LOG_BUFFER_SIZE = exports.HEADER_SIZE = void 0;
 var header_1 = require("./header");
 Object.defineProperty(exports, "HEADER_SIZE", { enumerable: true, get: function () { return header_1.HEADER_SIZE; } });
 var log_1 = require("./log");
 Object.defineProperty(exports, "LOG_BUFFER_SIZE", { enumerable: true, get: function () { return log_1.LOG_BUFFER_SIZE; } });
 Object.defineProperty(exports, "LogType", { enumerable: true, get: function () { return log_1.LogType; } });
-Object.defineProperty(exports, "MessageLogReader", { enumerable: true, get: function () { return log_1.MessageLogReader; } });
+Object.defineProperty(exports, "readMessageLog", { enumerable: true, get: function () { return log_1.readMessageLog; } });
 Object.defineProperty(exports, "MessageLogWriter", { enumerable: true, get: function () { return log_1.MessageLogWriter; } });
 const message_1 = require("./message");
 var message_2 = require("./message");

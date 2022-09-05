@@ -35,10 +35,5 @@ export declare class MessageLogWriter {
      */
     writeCommand(buffer: Buffer, rawCommandData: Buffer, timestamp: bigint): Promise<void>;
 }
-export declare class MessageLogReader {
-    private in;
-    constructor(logFilePath: string);
-    close(): Promise<void>;
-    read(): Generator<MessageLogData, void, unknown>;
-}
+export declare const readMessageLog: (logFilePath: string) => Promise<MessageLogData[]>;
 export {};

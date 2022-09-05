@@ -1,4 +1,5 @@
-import { createReadStream, createWriteStream, ReadStream, WriteStream } from 'fs';
+import { createWriteStream, WriteStream } from 'fs';
+import { readFile } from 'fs/promises';
 import { decodeHeader, HEADER_SIZE } from './header';
 
 export const LOG_BUFFER_SIZE = 9 + HEADER_SIZE;
@@ -31,19 +32,19 @@ const readLogData = (buffer: Buffer, offset: number): MessageLogData => {
   const receivedTimestamp = buffer.readBigUInt64BE(offset + 1);
 
   switch (type) {
-    case LogType.Feedback: {
-      const { messageId, timestamp: sentTimestamp } = decodeHeader(buffer.slice(offset + 9, offset + 9 + HEADER_SIZE));
-      return { type, messageId, sentTimestamp, receivedTimestamp };
-    }
-    case LogType.ManualCommand:
-      return {
-        type,
-        receivedTimestamp,
-        rawCommandData: buffer.slice(offset + 9, offset + 11),
-      };
+  case LogType.Feedback: {
+    const { messageId, timestamp: sentTimestamp } = decodeHeader(buffer.slice(offset + 9, offset + 9 + HEADER_SIZE));
+    return { type, messageId, sentTimestamp, receivedTimestamp };
+  }
+  case LogType.ManualCommand:
+    return {
+      type,
+      receivedTimestamp,
+      rawCommandData: buffer.slice(offset + 9, offset + 11),
+    };
 
-    default:
-      throw `Unknown message type: ${type}`;
+  default:
+    throw `Unknown message type: ${type}`;
   }
 
 };
@@ -106,53 +107,20 @@ export class MessageLogWriter {
   }
 }
 
-export class MessageLogReader {
-  private in: ReadStream;
-
-  constructor(logFilePath: string) {
-    this.in = createReadStream(logFilePath);
+export const readMessageLog = async (logFilePath: string) => {
+  const data = await readFile(logFilePath);
+  
+  const messages: MessageLogData[] = [];
+  let offset = 0;
+  while (offset + LOG_BUFFER_SIZE <= data.length) {
+    messages.push(readLogData(data, offset));
+    offset += LOG_BUFFER_SIZE;
   }
 
-  public close() {
-    return new Promise<void>((resolve, reject) => {
-      this.in.close(err => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve();
-      });
-    });
+  if (offset !== LOG_BUFFER_SIZE) {
+    throw new Error(`Input file size was not a multiple of ${LOG_BUFFER_SIZE} bytes`);
   }
 
-  public *read() {
-    const partial = Buffer.alloc(LOG_BUFFER_SIZE);
-    let partialFilled = 0;
+  return messages;
+};
 
-    let chunk = this.in.read() as Buffer | null;
-    while (chunk) {
-      let offset = 0;
-      if (partialFilled > 0) {
-        offset = LOG_BUFFER_SIZE - partialFilled;
-        partial.fill(chunk.slice(0, LOG_BUFFER_SIZE - partialFilled), partialFilled);
-        yield readLogData(partial, 0);
-      }
-
-      while (offset + LOG_BUFFER_SIZE <= chunk.length) {
-        yield readLogData(chunk, offset);
-        offset += LOG_BUFFER_SIZE;
-      }
-
-      partialFilled = chunk.length - offset;
-      if (partialFilled > 0) {
-        partial.fill(chunk.slice(offset), 0, partialFilled);
-      }
-
-      chunk = this.in.read() as Buffer | null;
-    }
-
-    if (partialFilled > 0) {
-      throw new Error(`Input file size was not a multiple of ${LOG_BUFFER_SIZE} bytes`);
-    }
-  }
-}

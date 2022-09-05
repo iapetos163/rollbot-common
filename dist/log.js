@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MessageLogReader = exports.MessageLogWriter = exports.LogType = exports.LOG_BUFFER_SIZE = void 0;
+exports.readMessageLog = exports.MessageLogWriter = exports.LogType = exports.LOG_BUFFER_SIZE = void 0;
 const fs_1 = require("fs");
+const promises_1 = require("fs/promises");
 const header_1 = require("./header");
 exports.LOG_BUFFER_SIZE = 9 + header_1.HEADER_SIZE;
 var LogType;
@@ -81,46 +82,17 @@ class MessageLogWriter {
     }
 }
 exports.MessageLogWriter = MessageLogWriter;
-class MessageLogReader {
-    in;
-    constructor(logFilePath) {
-        this.in = (0, fs_1.createReadStream)(logFilePath);
+const readMessageLog = async (logFilePath) => {
+    const data = await (0, promises_1.readFile)(logFilePath);
+    const messages = [];
+    let offset = 0;
+    while (offset + exports.LOG_BUFFER_SIZE <= data.length) {
+        messages.push(readLogData(data, offset));
+        offset += exports.LOG_BUFFER_SIZE;
     }
-    close() {
-        return new Promise((resolve, reject) => {
-            this.in.close(err => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve();
-            });
-        });
+    if (offset !== exports.LOG_BUFFER_SIZE) {
+        throw new Error(`Input file size was not a multiple of ${exports.LOG_BUFFER_SIZE} bytes`);
     }
-    *read() {
-        const partial = Buffer.alloc(exports.LOG_BUFFER_SIZE);
-        let partialFilled = 0;
-        let chunk = this.in.read();
-        while (chunk) {
-            let offset = 0;
-            if (partialFilled > 0) {
-                offset = exports.LOG_BUFFER_SIZE - partialFilled;
-                partial.fill(chunk.slice(0, exports.LOG_BUFFER_SIZE - partialFilled), partialFilled);
-                yield readLogData(partial, 0);
-            }
-            while (offset + exports.LOG_BUFFER_SIZE <= chunk.length) {
-                yield readLogData(chunk, offset);
-                offset += exports.LOG_BUFFER_SIZE;
-            }
-            partialFilled = chunk.length - offset;
-            if (partialFilled > 0) {
-                partial.fill(chunk.slice(offset), 0, partialFilled);
-            }
-            chunk = this.in.read();
-        }
-        if (partialFilled > 0) {
-            throw new Error(`Input file size was not a multiple of ${exports.LOG_BUFFER_SIZE} bytes`);
-        }
-    }
-}
-exports.MessageLogReader = MessageLogReader;
+    return messages;
+};
+exports.readMessageLog = readMessageLog;
