@@ -90,7 +90,7 @@ const readMessageLog = async (logFilePath) => {
         messages.push(readLogData(data, offset));
         offset += exports.LOG_BUFFER_SIZE;
     }
-    if (offset !== exports.LOG_BUFFER_SIZE) {
+    if (offset !== data.length) {
         throw new Error(`Input file size was not a multiple of ${exports.LOG_BUFFER_SIZE} bytes`);
     }
     return messages;
